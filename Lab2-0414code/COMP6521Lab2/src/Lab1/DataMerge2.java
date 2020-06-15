@@ -1,0 +1,115 @@
+package Lab1;
+import java.io.*;
+import java.util.*;
+
+public class DataMerge2 {
+
+    /**
+     * phase2 start method
+     * @param totalMemory
+     * @throws IOException
+     */
+    public void start(long totalMemory) throws IOException{
+        DataMerge2 phase2 = new DataMerge2();
+        DataMergeTool po = new DataMergeTool();
+        //init file
+        po.fileInit();
+        int[] param = phase2.config(totalMemory);
+
+        //sublist number
+        int subListsNum = param[0];
+        //sublist size
+        int subListsSize = param[1];
+        // one block size
+        int memorySubListsSize = param[2];
+
+        //init file address
+        String[] fileAddress = po.fileAddress(subListsNum);
+        //init pointer
+        BufferedReader[] brInit = po.bufferInit(subListsNum,fileAddress);
+
+        phase2.duplictInsert(subListsNum,memorySubListsSize,fileAddress,brInit);
+
+    }
+
+
+    /**
+     * Remove duplicated data and insert new data
+     * @param subListsNum
+     * @param memorySubListsSize
+     * @param fileAddress
+     * @param brPointer
+     * @throws IOException
+     */
+    public void duplictInsert( int subListsNum, int memorySubListsSize, String[] fileAddress, BufferedReader[] brPointer) throws IOException{
+        DataMergeTool po = new DataMergeTool();
+        //init n blocks in memory
+        List <List<String>> memorySubListsList = po.init(subListsNum);
+        //buffer list in memory
+        List <String> bufferList = new ArrayList<>();
+        List <String> firstLine = new ArrayList<>();
+
+        while (true){
+            //add data to memory
+            for (int index=0;index<subListsNum;index++){
+                if (memorySubListsList.get(index).size() == 0){
+                    Map<List<String>,BufferedReader[]> map = po.fetchSublist(fileAddress,index,brPointer,memorySubListsSize);
+                    Map.Entry<List<String>,BufferedReader[]> result = map.entrySet().iterator().next();
+                    memorySubListsList.set(index,result.getKey());
+                    brPointer = result.getValue();
+                }
+            }
+
+            // create the first line to compare
+            firstLine = new ArrayList<>();
+            for (int i=0;i<subListsNum;i++){
+                firstLine.add(memorySubListsList.get(i).get(0));
+            }
+
+            //get the index of biggest value
+            int maxIndex;
+            maxIndex = po.maxIndex(firstLine,subListsNum);
+            if (maxIndex == -1){
+                break;
+            }
+
+            //get the line of biggest value
+            String maxLine;
+            maxLine = memorySubListsList.get(maxIndex).get(0);
+
+            //process bufferList
+            bufferList = po.bufferProcess(bufferList,maxLine,memorySubListsSize);
+
+            //remove the biggest line in block of memory
+            memorySubListsList.get(maxIndex).remove(0);
+        }
+        //process the last sublist
+        if (bufferList != null){
+            po.outputFile(bufferList);
+        }
+    }
+
+    /**
+     *Define subListsNum, subListsSize and subListsSize
+     * @param totalMemory
+     * @return
+     * @throws IOException
+     */
+    public int[] config(long totalMemory) throws IOException{
+
+        DataMergeTool po = new DataMergeTool();
+        int sublistSize = po.sublistSize();
+
+        int[] param = new int[3];
+        String[] content = new File("/Temp").list();
+
+        assert content != null;
+        //subListsNum
+        param[0] = 30;
+        //subListsSize
+        param[1] = sublistSize;
+        //subListsSize(sublist, bufferReader, bufferList and others in memory)
+        param[2] = (int) (totalMemory/100 / (param[0]*5));
+        return param;
+    }
+}
